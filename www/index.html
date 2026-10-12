@@ -106,7 +106,7 @@ body {
   overflow: hidden;
 }
 .app { max-width: 460px; height: 100%; margin-inline: auto; display: flex; flex-direction: column; gap: 10px; }
-.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none; }
+.top { display: none; }
 h1 { font-family: var(--display); font-size: 1.3rem; font-weight: 700; line-height: 1.2; margin: 0; }
 .now { font-size: .85rem; font-weight: 700; color: #FFFFFF; white-space: nowrap; margin-left: auto; font-variant-numeric: tabular-nums; }
 .sync { font-size: .74rem; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
@@ -196,9 +196,10 @@ input:focus { border-color: var(--accent); }
 .c-item[data-vf] { cursor: pointer; }
 .c-item[data-vf]:active { background: var(--accent-soft); }
 .c-out { font-family: var(--display); font-weight: 700; font-size: clamp(1.8rem, 5.5vh, 2.4rem); line-height: 1.2; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-.icon-btn { position: absolute; left: 8px; top: 8px; width: 42px; height: 42px; border-radius: 12px; border: 0; background: var(--field-2); color: var(--muted); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.icon-btn { position: absolute; left: 8px; top: 8px; width: 42px; height: 42px; border-radius: 12px; border: 0; background: none; color: var(--muted); display: grid; place-items: center; cursor: pointer; padding: 0; }
 .icon-btn svg { width: 22px; height: 22px; }
 .icon-btn:active { transform: scale(.95); }
+.bs-btn { top: auto; bottom: 8px; }
 .keys { flex: 0 1 460px; min-height: 0; max-height: 460px; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(5, minmax(44px, 1fr)); gap: 8px; }
 .keys button {
   font-family: var(--display); font-weight: 600; font-size: clamp(1.15rem, 3.6vh, 1.5rem); min-height: 0; border-radius: 14px;
@@ -217,8 +218,9 @@ input:focus { border-color: var(--accent); }
 .sheet-head { flex: none; display: flex; align-items: center; gap: 8px; min-height: 42px; }
 .sheet-head h2 { flex: 1; min-width: 0; }
 .back { font: inherit; font-weight: 600; font-size: .9rem; min-height: 42px; padding: 0 12px; border-radius: 12px; border: 0; background: var(--field-2); color: var(--ink); cursor: pointer; }
-.c-item { height: 72px; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: center; border-bottom: 1px solid var(--line); }
-.c-no { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: .74rem; font-weight: 600; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+.back-ic { width: 42px; padding: 0; background: none; display: inline-grid; place-items: center; flex: none; }
+.back-ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.c-item { height: 72px; display: grid; grid-template-columns: 1fr; gap: 0; align-items: center; border-bottom: 1px solid var(--line); }
 .c-body { min-width: 0; display: grid; gap: 2px; }
 .c-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-width: 0; }
 .c-e { color: var(--muted); font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-variant-numeric: tabular-nums; }
@@ -334,7 +336,13 @@ h2 { font-family: var(--display); font-size: 1.05rem; font-weight: 700; margin: 
 .memo, .histbox, .screen { box-shadow: inset 0 1px 0 rgba(255,255,255,.10); }
 input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
 .tabs button[aria-selected="true"], .seg button[aria-checked="true"] { background: #262626; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
-.cfm-box { background: rgba(28,32,42,.97); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+.cfm { background: rgba(0,0,0,.35); -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%); animation: popFade .18s ease; }
+.cfm-box { background: rgba(40,46,60,.45); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); border: 1px solid rgba(255,255,255,.18); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 12px 40px rgba(0,0,0,.45); animation: popIn .2s ease; }
+.menu { background: rgba(40,46,60,.45); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); border: 1px solid rgba(255,255,255,.18); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 12px 40px rgba(0,0,0,.45); animation: popIn .16s ease; }
+.menu-bd { position: fixed; inset: 0; z-index: 49; background: rgba(0,0,0,.35); -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%); animation: popFade .18s ease; }
+.menu-bd[hidden] { display: none; }
+@keyframes popFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
 .primary { background: #CFD3DC; }
 .keys .eq { background: #CFD3DC; }
 @media (max-height: 640px) {
@@ -383,7 +391,6 @@ input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
   <header class="top">
     <h1 id="ttl">ক্যালকুলেটর</h1>
     <span id="sync" class="sync" hidden></span>
-    <span id="now" class="now"></span>
   </header>
 
   <section id="p-price" class="view" role="tabpanel" aria-labelledby="tab-price" hidden>
@@ -397,7 +404,7 @@ input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
         </div>
       </div>
       <div class="field">
-        <label for="rw">কত ওজনের দাম</label>
+        <label for="rw">পরিমাণ</label>
         <input id="rw" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="০.০০">
       </div>
       <div class="field">
@@ -407,13 +414,13 @@ input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
     </div>
 
     <div class="seg" role="radiogroup" aria-label="কী জানতে চান">
-      <button type="button" role="radio" id="m-w" data-m="w" aria-checked="true">ওজন দিয়ে দাম</button>
-      <button type="button" role="radio" id="m-p" data-m="p" aria-checked="false">টাকা দিয়ে ওজন</button>
+      <button type="button" role="radio" id="m-w" data-m="w" aria-checked="true">পরিমাণ দিয়ে টাকা</button>
+      <button type="button" role="radio" id="m-p" data-m="p" aria-checked="false">টাকা দিয়ে পরিমাণ</button>
     </div>
 
     <div class="row2" id="grp-w">
       <div class="field">
-        <label for="w">আপনি কিনছেন</label>
+        <label for="w">আপনি কিনছেন (পরিমাণ)</label>
         <input id="w" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="০.০০">
       </div>
       <div class="field">
@@ -463,12 +470,15 @@ input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
       </button>
       <div class="c-expr" id="c-expr">&nbsp;</div>
       <div class="c-out" id="c-out">০</div>
+      <button type="button" class="icon-btn bs-btn" id="c-bs" aria-label="একটা মুছুন">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"></path><path d="M16 9.5l-5 5M11 9.5l5 5"></path></svg>
+      </button>
     </div>
     <div class="keys" id="keys"></div>
 
     <div class="sheet" id="csheet" hidden>
       <div class="sheet-head">
-        <button type="button" class="back" id="cs-back">‹ ফিরুন</button>
+        <button type="button" class="back back-ic" id="cs-back" aria-label="ফিরুন"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
         <h2>ক্যালকুলেটর হিস্টরি</h2>
         <div id="cs-clear"></div>
       </div>
@@ -482,7 +492,7 @@ input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
 
     <div class="sheet" id="vsheet" hidden>
       <div class="sheet-head">
-        <button type="button" class="back" id="v-back">‹ ফিরুন</button>
+        <button type="button" class="back back-ic" id="v-back" aria-label="ফিরুন"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
         <h2>মিলিয়ে দেখুন</h2>
       </div>
       <div class="v-sum"><div class="v-scroll" id="v-expr"></div></div>
@@ -517,6 +527,7 @@ input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
   </div>
 </div>
 
+<div class="menu-bd" id="menu-bd" hidden></div>
 <div class="menu" id="menu" role="listbox" hidden></div>
 
 <script>
@@ -525,7 +536,10 @@ input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
 
 /*PURE*/
 var BN = "০১২৩৪৫৬৭৮৯";
-var UNITS = { g: { n: "গ্রাম", f: 1 }, kg: { n: "কেজি", f: 1000 }, poa: { n: "পোয়া", f: 250 } };
+var UNITS = { g: { n: "গ্রাম", f: 1, d: "w" }, kg: { n: "কেজি", f: 1000, d: "w" }, ml: { n: "মিলিলিটার", f: 1, d: "v" }, l: { n: "লিটার", f: 1000, d: "v" }, poa: { n: "পোয়া", f: 250, d: "w" } };
+var BASE = { w: { u: "g", n: "গ্রাম", big: "কেজি" }, v: { u: "ml", n: "মিলিলিটার", big: "লিটার" } };
+var SWAP = { g: "ml", ml: "g", kg: "l", l: "kg" };
+function dimOf(u) { return (UNITS[u] || UNITS.g).d; }
 
 function toAscii(s) {
   return String(s).replace(/[০-৯]/g, function (d) { return BN.indexOf(d); }).replace(/,/g, "").replace(/।/g, ".").trim();
@@ -618,6 +632,11 @@ function dispExpr(s) {
   return bnDigits(s).replace(/\*/g, "×").replace(/\//g, "÷").replace(/-/g, "−")
     .replace(/([+×÷−])/g, " $1 ").replace(/\s+/g, " ").trim();
 }
+/* 1000 or more gram/ml shows as kg/litre, less stays gram/ml */
+function baseParts(g, d) {
+  var b = BASE[d];
+  return g >= 1000 ? [numf(g / 1000, 3), b.big] : [numf(r1(g), 1), b.n];
+}
 function qty(v, u) { return numf(v, 3) + " " + (UNITS[u] || UNITS.g).n; }
 function esc(s) {
   return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
@@ -627,10 +646,13 @@ function esc(s) {
 var LS_KEY = "bazar-hisab-v1", MAX_HIST = 300, MAX_CALC = 300;
 var FIELDS = ["item", "rp", "rw", "w", "amt"];
 var DEFAULT_FORM = { item: "", rp: "", rw: "", ru: "g", w: "", wu: "g", m: "w", amt: "" };
-/* the unit list is only গ্রাম and কেজি now; turn any old পোয়া value into grams */
+/* units: গ্রাম, কেজি, মিলিলিটার, লিটার; turn any old পোয়া value into grams */
 function fixUnits(f) {
   if (f.ru === "poa") { var a = parse(f.rw); if (!isNaN(a)) f.rw = String(a * 250); f.ru = "g"; }
   if (f.wu === "poa") { var b = parse(f.w); if (!isNaN(b)) f.w = String(b * 250); f.wu = "g"; }
+  if (!UNITS[f.ru]) f.ru = "g";
+  if (!UNITS[f.wu]) f.wu = "g";
+  if (dimOf(f.wu) !== dimOf(f.ru)) f.wu = SWAP[f.wu] || "g";
 }
 var lsOk = true;
 try { localStorage.setItem("bazar-hisab-t", "1"); localStorage.removeItem("bazar-hisab-t"); } catch (e) { lsOk = false; }
@@ -744,8 +766,6 @@ function whenLabel(ts) {
   h = h % 12 || 12;
   return bnDigits(d.getDate()) + " " + BN_MON[d.getMonth()] + ", " + bnDigits(h) + ":" + bnDigits(m < 10 ? "0" + m : m) + " " + ap;
 }
-function tickNow() { $("now").textContent = whenLabel(Date.now()); }
-tickNow(); setInterval(function () { if (!document.hidden) tickNow(); }, 15000);
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 var TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
 function clearHtml() {
@@ -783,16 +803,18 @@ function renderPrice() {
   var ok = q ? c.rateOk && c.amtOk : c.rateOk && c.weightOk;
   if (ok && q) {
     var g = c.grams;
-    total.innerHTML = numf(r1(g), 1) + "<small>গ্রাম</small>";
+    var bp = baseParts(g, dimOf(f.ru));
+    total.innerHTML = bp[0] + "<small>" + bp[1] + "</small>";
     detail.textContent = (item ? item + " · " : "") + money(c.amt) + "৳";
   } else if (ok) {
     total.innerHTML = money(c.total) + "<span class='cur'>৳</span>";
     detail.textContent = (item ? item + " · " : "") + qty(c.wv, f.wu);
-    if (f.wu !== "g") sub.textContent = qty(c.wv, f.wu) + " = " + numf(c.wG, 3) + " গ্রাম";
-    else if (c.wG >= 1000) sub.textContent = qty(c.wv, "g") + " = " + numf(c.wG / 1000, 3) + " কেজি";
+    var bs = BASE[dimOf(f.wu)];
+    if (f.wu !== bs.u) sub.textContent = qty(c.wv, f.wu) + " = " + numf(c.wG, 3) + " " + bs.n;
+    else if (c.wG >= 1000) sub.textContent = qty(c.wv, bs.u) + " = " + numf(c.wG / 1000, 3) + " " + bs.big;
   } else {
-    total.innerHTML = q ? "০.০<small>গ্রাম</small>" : "০.০০<span class='cur'>৳</span>";
-    detail.textContent = !c.rateOk ? "আগে দোকানের রেট লিখুন" : q ? "কত টাকার কিনবেন, সেটা লিখুন" : "কত ওজন কিনছেন, সেটা লিখুন";
+    total.innerHTML = q ? "০.০<small>" + BASE[dimOf(f.ru)].n + "</small>" : "০.০০<span class='cur'>৳</span>";
+    detail.textContent = !c.rateOk ? "আগে দোকানের রেট লিখুন" : q ? "কত টাকার কিনবেন, সেটা লিখুন" : "কত পরিমাণ কিনছেন, সেটা লিখুন";
   }
   $("save").disabled = !ok;
 }
@@ -829,7 +851,7 @@ var askClear = false, hPg = { p: 0 };
 
 function entryHtml(e) {
   var title, total, item = e.item ? esc(e.item) + " · " : "";
-  if (e.t === "q") { title = item + esc(money(e.amt)) + "৳"; total = esc(numf(e.grams, 1)) + "<span>গ্রাম</span>"; }
+  if (e.t === "q") { title = item + esc(money(e.amt)) + "৳"; var hp = baseParts(e.grams, dimOf(e.ru)); total = esc(hp[0]) + "<span>" + hp[1] + "</span>"; }
   else { title = item + esc(qty(e.w, e.wu)); total = esc(money(e.total)) + "<span class='cur'>৳</span>"; }
   var meta = whenLabel(e.ts);
   return '<div class="h-item"><div class="h-main"><div class="h-title">' + title + '</div><div class="h-total">' + total + '</div></div>' +
@@ -1100,6 +1122,8 @@ $("keys").addEventListener("click", function (ev) {
   if (b) press(b.dataset.k);
 });
 /* keep the cursor in the number while the keypad is tapped */
+$("c-bs").addEventListener("click", function () { press("⌫"); });
+$("c-bs").addEventListener("mousedown", function (ev) { if (calc.ed) ev.preventDefault(); });
 $("keys").addEventListener("mousedown", function (ev) { if (calc.ed) ev.preventDefault(); });
 /* tap any number in the expression to edit it with a cursor */
 $("c-expr").addEventListener("click", function (ev) {
@@ -1140,7 +1164,7 @@ function sumNums(expr) {
 }
 function calcItemHtml(e, i, n) {
   var vf = sumNums(e.expr) ? ' data-vf="1" data-id="' + esc(e.id) + '"' : "";
-  return '<div class="c-item"' + vf + '><div class="c-no">' + esc(numf(n - i, 0)) + '</div><div class="c-body">' +
+  return '<div class="c-item"' + vf + '><div class="c-body">' +
     '<div class="c-line"><span class="c-e">' + esc(dispExpr(e.expr)) + '</span><span class="c-r">= ' + esc(numf(e.result, 6)) + '</span></div>' +
     '<div class="c-line c-sub"><span>' + esc(whenLabel(e.ts)) + '</span><span class="h-actions">' +
     '<button type="button" class="link-btn" data-act="use" data-id="' + esc(e.id) + '">ব্যবহার</button>' +
@@ -1337,17 +1361,18 @@ window.addEventListener("resize", function () {
 });
 
 /* ---------- unit picker: a see-through, blurred glass menu ---------- */
-var UNIT_OPTS = [{ v: "g", n: "গ্রাম" }, { v: "kg", n: "কেজি" }];
+var UNIT_OPTS = [{ v: "g", n: "গ্রাম" }, { v: "kg", n: "কেজি" }, { v: "ml", n: "মিলিলিটার" }, { v: "l", n: "লিটার" }];
 var menu = $("menu"), menuFor = null;
 var CHECK = '<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
 function setPick(id) {
-  var b = $(id), v = state.form[id] === "kg" ? "kg" : "g";
+  var b = $(id), v = UNITS[state.form[id]] ? state.form[id] : "g";
   b.dataset.v = v;
   b.querySelector(".pick-v").textContent = UNITS[v].n;
 }
 function closeMenu() {
   if (menu.hidden) return;
   menu.hidden = true;
+  $("menu-bd").hidden = true;
   if (menuFor) $(menuFor).setAttribute("aria-expanded", "false");
   menuFor = null;
 }
@@ -1358,6 +1383,7 @@ function openMenu(id) {
   menu.innerHTML = UNIT_OPTS.map(function (o) {
     return '<button type="button" role="option" data-v="' + o.v + '" aria-selected="' + (o.v === cur) + '"><span>' + o.n + "</span>" + (o.v === cur ? CHECK : "") + "</button>";
   }).join("");
+  $("menu-bd").hidden = false;
   menu.hidden = false;
   var r = btn.getBoundingClientRect();
   menu.style.minWidth = Math.max(140, r.width) + "px";
@@ -1380,7 +1406,10 @@ menu.addEventListener("click", function (ev) {
   var b = ev.target.closest("button[data-v]");
   if (!b || !menuFor) return;
   var id = menuFor;
-  state.form[id] = b.dataset.v; touched = true; saveLocal(); setPick(id); renderPrice();
+  state.form[id] = b.dataset.v;
+  if (id === "ru" && dimOf(state.form.wu) !== dimOf(b.dataset.v)) { state.form.wu = SWAP[state.form.wu] || "g"; setPick("wu"); }
+  if (id === "wu" && dimOf(state.form.ru) !== dimOf(b.dataset.v)) { state.form.ru = SWAP[state.form.ru] || "g"; setPick("ru"); }
+  touched = true; saveLocal(); setPick(id); renderPrice();
   closeMenu();
 });
 menu.addEventListener("keydown", function (ev) {
