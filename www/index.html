@@ -552,24 +552,27 @@ function compute(f) {
 }
 
 function evalExpr(s) {
-  var i = 0;
+  var i = 0, isPct = false, tp = false;
   function num() {
     var st = i;
     while (i < s.length && /[0-9.]/.test(s[i])) i++;
     if (st === i) throw new Error("num");
     var v = parseFloat(s.slice(st, i));
     if (isNaN(v)) throw new Error("num");
+    if (s[i] === "%") { i++; isPct = true; return v / 100; }
+    isPct = false;
     return v;
   }
   function factor() { if (s[i] === "-") { i++; return -factor(); } return num(); }
   function term() {
     var v = factor();
-    while (s[i] === "*" || s[i] === "/") { var o = s[i++]; var r = factor(); v = o === "*" ? v * r : v / r; }
+    tp = isPct;
+    while (s[i] === "*" || s[i] === "/") { var o = s[i++]; var r = factor(); v = o === "*" ? v * r : v / r; tp = false; }
     return v;
   }
   function expr() {
     var v = term();
-    while (s[i] === "+" || s[i] === "-") { var o = s[i++]; var r = term(); v = o === "+" ? v + r : v - r; }
+    while (s[i] === "+" || s[i] === "-") { var o = s[i++]; var r = term(); if (tp) r = v * r; v = o === "+" ? v + r : v - r; }
     return v;
   }
   var v = expr();
@@ -880,14 +883,14 @@ var KEYS = [
   ["৭", "7"], ["৮", "8"], ["৯", "9"], ["−", "-", "op", "বিয়োগ"],
   ["৪", "4"], ["৫", "5"], ["৬", "6"], ["+", "+", "op", "যোগ"],
   ["১", "1"], ["২", "2"], ["৩", "3"], ["=", "=", "eq", "সমান"],
-  ["০", "0", "z"], [".", ".", "", "দশমিক"]
+  ["০", "0"], [".", ".", "", "দশমিক"], ["%", "%", "op", "শতাংশ"]
 ];
 $("keys").innerHTML = KEYS.map(function (k) {
   return '<button type="button" class="' + (k[2] || "") + '" data-k="' + k[1] + '"' + (k[3] ? ' aria-label="' + k[3] + '"' : "") + ">" + k[0] + "</button>";
 }).join("");
 
 function trimTail(e) { return e.replace(/[+\-*/.]+$/, ""); }
-function hasOp(t) { return /[+*\/\-]/.test(t.slice(1)); }
+function hasOp(t) { return /[+*\/\-]/.test(t.slice(1)) || /%$/.test(t); }
 function round8(v) { return Math.round(v * 1e8) / 1e8; }
 
 var SYM = { "*": "×", "/": "÷", "-": "−", "+": "+" };
@@ -904,7 +907,7 @@ function normNum(a) {
 function fitEd(inp) { inp.style.width = (Math.max(2, inp.value.length) * 0.75 + 1.4) + "em"; }
 /* the expression as tappable numbers; number number k (if k >= 0) is an input with a cursor */
 function exprHtml(src, k, tail) {
-  var re = /(\d+\.?\d*|\.\d+)|([+\-*\/])/g, m, out = "", n = 0, prev = "";
+  var re = /(\d+\.?\d*|\.\d+)|([+\-*\/%])/g, m, out = "", n = 0, prev = "";
   while ((m = re.exec(src))) {
     if (m[1] !== undefined) {
       if (n === k) {
@@ -914,6 +917,7 @@ function exprHtml(src, k, tail) {
       n++; prev = "n";
     } else {
       var op = m[2], un = op === "-" && (prev === "" || prev === "*" || prev === "/");
+      if (op === "%") { out += "%"; prev = "n"; continue; }
       out += un ? SYM[op] : " " + SYM[op] + " ";
       prev = op;
     }
@@ -979,7 +983,7 @@ function renderCalc() {
     top = exprHtml(e, -1, "");
     var v; try { v = evalExpr(t); } catch (x) { v = NaN; }
     out = isFinite(v) ? numf(round8(v), 6) : "—";
-  } else { out = e === "" ? "০" : bnDigits(e); }
+  } else { out = e === "" ? "০" : bnDigits(e).replace(/\*/g, "×").replace(/\//g, "÷").replace(/-/g, "−"); }
   var ce = $("c-expr");
   ce.innerHTML = top || "&nbsp;";
   $("c-out").textContent = out;
@@ -1026,14 +1030,21 @@ function press(k) {
   }
   else if (/^\d$/.test(k)) {
     if (calc.fresh) { e = ""; calc.fresh = false; calc.last = ""; }
+    if (/%$/.test(e)) return;
     if (/(^|[+\-*\/])0$/.test(e)) e = e.slice(0, -1);
     calc.expr = e + k;
   }
   else if (k === ".") {
     if (calc.fresh) { e = "0"; calc.fresh = false; calc.last = ""; }
+    if (/%$/.test(e)) return;
     var cur = e.match(/[\d.]*$/)[0];
     if (cur.indexOf(".") >= 0) return;
     calc.expr = e + (cur === "" ? "0." : ".");
+  }
+  else if (k === "%") {
+    if (!/\d$/.test(e)) { renderCalc(); return; }
+    calc.fresh = false;
+    calc.expr = e + "%";
   }
   else {
     calc.fresh = false;
@@ -1272,7 +1283,7 @@ document.addEventListener("keydown", function (ev) {
   if (tg && /^(INPUT|SELECT|TEXTAREA)$/.test(tg.tagName)) return;
   var k = ev.key, a = toAscii(k);
   if (/^[0-9]$/.test(a)) k = a;
-  else if (k === "." || k === "+" || k === "-" || k === "*" || k === "/") { /* as is */ }
+  else if (k === "." || k === "+" || k === "-" || k === "*" || k === "/" || k === "%") { /* as is */ }
   else if (k === "x" || k === "X") k = "*";
   else if (k === "Enter" || k === "=") k = "=";
   else if (k === "Backspace") k = "⌫";
