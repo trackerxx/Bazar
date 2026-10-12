@@ -79,9 +79,9 @@
 :root {
   --bg-grad:
     linear-gradient(180deg, #000000 0%, rgba(0,0,0,0) 15%, rgba(0,0,0,0) 85%, #000000 100%),
-    radial-gradient(90% 34% at 15% 36%, rgba(175, 185, 210, .32), rgba(160, 170, 195, 0) 72%),
-    radial-gradient(80% 32% at 90% 64%, rgba(150, 160, 195, .26), rgba(130, 140, 170, 0) 74%),
-    radial-gradient(60% 22% at 55% 50%, rgba(255, 255, 255, .07), rgba(255, 255, 255, 0) 70%);
+    radial-gradient(90% 34% at 15% 36%, rgba(175, 185, 210, .12), rgba(160, 170, 195, 0) 72%),
+    radial-gradient(80% 32% at 90% 64%, rgba(150, 160, 195, .09), rgba(130, 140, 170, 0) 74%),
+    radial-gradient(60% 22% at 55% 50%, rgba(255, 255, 255, .025), rgba(255, 255, 255, 0) 70%);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
@@ -212,7 +212,7 @@ input:focus { border-color: var(--accent); }
 .keys .z { grid-column: span 2; }
 
 /* calculator history sheet, laid over the keypad */
-.sheet { position: absolute; inset: 0; z-index: 2; background: var(--bg-grad) #000000; display: flex; flex-direction: column; gap: 10px; }
+.sheet { position: absolute; inset: 0; z-index: 2; background: var(--bg-grad), #000000; background-attachment: fixed; background-size: 100vw 100vh; background-repeat: no-repeat; display: flex; flex-direction: column; gap: 10px; }
 .sheet[hidden] { display: none; }
 .sheet-head { flex: none; display: flex; align-items: center; gap: 8px; min-height: 42px; }
 .sheet-head h2 { flex: 1; min-width: 0; }
