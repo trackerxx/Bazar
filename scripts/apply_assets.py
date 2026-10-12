@@ -79,14 +79,14 @@ def make_splash(w, h):
     # icon thik majhkhane, tar niche tagline text (360dp wide phone e icon ~135dp)
     img = Image.new("RGB", (w, h), (0, 0, 0))
     m = min(w, h)
-    s = int(m * 0.375)
+    s = int(m * 0.27)
     t = splash.resize((s, s), Image.LANCZOS)
     ix, iy = (w - s) // 2, (h - s) // 2
     img.paste(t, (ix, iy), t)
-    tw = int(m * 0.62)
+    tw = int(m * 0.42)
     th = int(text.height * tw / text.width)
     tx = text.resize((tw, th), Image.LANCZOS)
-    img.paste(tx, ((w - tw) // 2, iy + s + int(m * 0.08)), tx)
+    img.paste(tx, ((w - tw) // 2, iy + s + int(m * 0.06)), tx)
     return img
 
 port = {"mdpi": (320, 480), "hdpi": (480, 800), "xhdpi": (720, 1280),
@@ -98,8 +98,8 @@ save(make_splash(480, 800), f"{RES}/drawable/splash.png")
 
 # Android 12+ system splash (icon + black bg)
 sq = Image.new("RGBA", (960, 960), (0, 0, 0, 0))
-t = splash.resize((450, 450), Image.LANCZOS)
-sq.alpha_composite(t, (255, 255))
+t = splash.resize((320, 320), Image.LANCZOS)
+sq.alpha_composite(t, (320, 320))
 save(sq, f"{RES}/drawable-nodpi/splash_icon.png")
 
 # splash theme: Capacitor er generate kora styles.xml e black bg + icon boshao
