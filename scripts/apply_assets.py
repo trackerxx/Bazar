@@ -9,6 +9,28 @@ SRC = "resources" if os.path.isdir("resources") else "."  # folder na thakle rep
 
 fg     = Image.open(f"{SRC}/icon-foreground.png").convert("RGBA")
 legacy = Image.open(f"{SRC}/icon-legacy.png").convert("RGBA")
+# ---------- Icon ke ektu choto kora (edge e jeno kata na pore) ----------
+ICON_SCALE = 0.72
+
+def shrink_fg(img, k):
+    W, H = img.size
+    w, h = int(W * k), int(H * k)
+    out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    out.paste(img.resize((w, h), Image.LANCZOS), ((W - w) // 2, (H - h) // 2))
+    return out
+
+def shrink_legacy(img, k):
+    W, H = img.size
+    w, h = int(W * k), int(H * k)
+    base = Image.new("RGBA", (W, H), (0, 0, 0, 255))
+    inner = img.resize((w, h), Image.LANCZOS)
+    base.alpha_composite(inner, ((W - w) // 2, (H - h) // 2))
+    base.putalpha(img.getchannel("A"))  # ager rounded corner thik rakho
+    return base
+
+fg = shrink_fg(fg, ICON_SCALE)
+legacy = shrink_legacy(legacy, ICON_SCALE)
+
 splash = Image.open(f"{SRC}/splash-icon.png").convert("RGBA")
 text   = Image.open(f"{SRC}/splash-text.png").convert("RGBA")
 
