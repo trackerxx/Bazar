@@ -208,7 +208,7 @@ input:focus { border-color: var(--accent); }
 .keys .op { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
 .keys .fn { background: var(--field-2); border-color: transparent; }
 .keys .clr { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
-.keys .eq { background: var(--accent); color: var(--accent-ink); border-color: transparent; grid-row: span 2; }
+.keys .eq { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 .keys .z { grid-column: span 2; }
 
 /* calculator history sheet, laid over the keypad */
@@ -372,11 +372,11 @@ input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
       if(sp&&sp.hide) sp.hide({fadeOutDuration:0});
     }catch(e){}
   }
-  function hide(){ nativeHide(); if(!s) return; s.style.opacity='0'; setTimeout(function(){ if(s&&s.parentNode) s.parentNode.removeChild(s); s=null; },400); }
+  function hide(){ nativeHide(); if(!s) return; s.style.opacity='0'; setTimeout(function(){ if(s&&s.parentNode) s.parentNode.removeChild(s); s=null; },350); }
   if(window.requestAnimationFrame){ requestAnimationFrame(function(){ requestAnimationFrame(nativeHide); }); }
   setTimeout(nativeHide,800);
-  // Web splash thik 2.5 second thakbe, tarpor fade out hobe
-  setTimeout(hide,2500);
+  // Web splash 2 second er moddhe chole jabe (1.65s thake + 0.35s fade out)
+  setTimeout(hide,1650);
 })();
 </script>
 <main class="app">
@@ -563,7 +563,18 @@ function evalExpr(s) {
     isPct = false;
     return v;
   }
-  function factor() { if (s[i] === "-") { i++; return -factor(); } return num(); }
+  function factor() {
+    if (s[i] === "-") { i++; return -factor(); }
+    if (s[i] === "(") {
+      i++;
+      var pv = expr();
+      if (s[i] === ")") i++; else if (i < s.length) throw new Error("paren");
+      if (s[i] === "%") { i++; isPct = true; return pv / 100; }
+      isPct = false;
+      return pv;
+    }
+    return num();
+  }
   function term() {
     var v = factor();
     tp = isPct;
@@ -879,17 +890,18 @@ $("hb-head").addEventListener("click", function (ev) {
 /* ---------- calculator ---------- */
 var calc = { expr: "", last: "", fresh: false, err: "", ed: null };
 var KEYS = [
-  ["C", "C", "clr", "সব মুছুন"], ["⌫", "⌫", "fn", "একটা মুছুন"], ["÷", "/", "op", "ভাগ"], ["×", "*", "op", "গুণ"],
-  ["৭", "7"], ["৮", "8"], ["৯", "9"], ["−", "-", "op", "বিয়োগ"],
-  ["৪", "4"], ["৫", "5"], ["৬", "6"], ["+", "+", "op", "যোগ"],
-  ["১", "1"], ["২", "2"], ["৩", "3"], ["=", "=", "eq", "সমান"],
-  ["০", "0"], [".", ".", "", "দশমিক"], ["%", "%", "op", "শতাংশ"]
+  ["C", "C", "clr", "সব মুছুন"], ["( )", "()", "op", "বন্ধনী"], ["%", "%", "op", "শতাংশ"], ["÷", "/", "op", "ভাগ"],
+  ["৭", "7"], ["৮", "8"], ["৯", "9"], ["×", "*", "op", "গুণ"],
+  ["৪", "4"], ["৫", "5"], ["৬", "6"], ["−", "-", "op", "বিয়োগ"],
+  ["১", "1"], ["২", "2"], ["৩", "3"], ["+", "+", "op", "যোগ"],
+  ["+/−", "±", "", "চিহ্ন বদল"], ["০", "0"], [".", ".", "", "দশমিক"], ["=", "=", "eq", "সমান"]
 ];
 $("keys").innerHTML = KEYS.map(function (k) {
   return '<button type="button" class="' + (k[2] || "") + '" data-k="' + k[1] + '"' + (k[3] ? ' aria-label="' + k[3] + '"' : "") + ">" + k[0] + "</button>";
 }).join("");
 
-function trimTail(e) { return e.replace(/[+\-*/.]+$/, ""); }
+function trimTail(e) { return e.replace(/[+\-*/.(]+$/, ""); }
+function closeParens(t) { var o = (t.match(/\(/g) || []).length, c = (t.match(/\)/g) || []).length; return o > c ? t + new Array(o - c + 1).join(")") : t; }
 function hasOp(t) { return /[+*\/\-]/.test(t.slice(1)) || /%$/.test(t); }
 function round8(v) { return Math.round(v * 1e8) / 1e8; }
 
@@ -907,7 +919,7 @@ function normNum(a) {
 function fitEd(inp) { inp.style.width = (Math.max(2, inp.value.length) * 0.75 + 1.4) + "em"; }
 /* the expression as tappable numbers; number number k (if k >= 0) is an input with a cursor */
 function exprHtml(src, k, tail) {
-  var re = /(\d+\.?\d*|\.\d+)|([+\-*\/%])/g, m, out = "", n = 0, prev = "";
+  var re = /(\d+\.?\d*|\.\d+)|([+\-*\/%()])/g, m, out = "", n = 0, prev = "";
   while ((m = re.exec(src))) {
     if (m[1] !== undefined) {
       if (n === k) {
@@ -916,8 +928,10 @@ function exprHtml(src, k, tail) {
       } else out += '<span class="c-n" data-k="' + n + '">' + bnDigits(m[1]) + "</span>";
       n++; prev = "n";
     } else {
-      var op = m[2], un = op === "-" && (prev === "" || prev === "*" || prev === "/");
+      var op = m[2], un = op === "-" && (prev === "" || prev === "*" || prev === "/" || prev === "(");
       if (op === "%") { out += "%"; prev = "n"; continue; }
+      if (op === "(") { out += "("; prev = "("; continue; }
+      if (op === ")") { out += ")"; prev = "n"; continue; }
       out += un ? SYM[op] : " " + SYM[op] + " ";
       prev = op;
     }
@@ -979,7 +993,7 @@ function renderCalc() {
   if (calc.ed) { top = exprHtml(e, calc.ed.k, ""); out = "০"; }
   else if (calc.err) { top = calc.last ? exprHtml(calc.last, -1, "") : ""; out = calc.err; }
   else if (calc.fresh) { top = exprHtml(calc.last, -1, " ="); out = numf(parseFloat(e), 6); }
-  else if (hasOp(t)) {
+  else if (hasOp(t) || /\(/.test(t)) {
     top = exprHtml(e, -1, "");
     var v; try { v = evalExpr(t); } catch (x) { v = NaN; }
     out = isFinite(v) ? numf(round8(v), 6) : "—";
@@ -1018,7 +1032,7 @@ function press(k) {
   }
   else if (k === "=") {
     if (calc.fresh) return;
-    var t = trimTail(e);
+    var t = closeParens(trimTail(e));
     if (t === "" || t === "-" || !hasOp(t)) return;
     var v; try { v = evalExpr(t); } catch (x) { v = NaN; }
     if (!isFinite(v)) { calc.err = "ভাগ করা যায় না"; calc.last = t; calc.expr = ""; renderCalc(); return; }
@@ -1028,30 +1042,54 @@ function press(k) {
     calc.last = t;
     if (/e/i.test(s)) { calc.expr = ""; calc.fresh = false; } else { calc.expr = s; calc.fresh = true; }
   }
+  else if (k === "()") {
+    if (calc.fresh) { e = ""; calc.fresh = false; calc.last = ""; }
+    var op = (e.match(/\(/g) || []).length, cl = (e.match(/\)/g) || []).length;
+    if (/[\d%)]$/.test(e)) {
+      if (op > cl) calc.expr = e + ")";
+      else calc.expr = e + "*(";
+    } else calc.expr = e + "(";
+  }
+  else if (k === "±") {
+    if (calc.fresh) { calc.fresh = false; calc.last = ""; }
+    var mm = e.match(/(\d+\.?\d*|\.\d+)(%?)$/);
+    if (e === "") calc.expr = "-";
+    else if (mm) {
+      var head = e.slice(0, e.length - mm[0].length);
+      if (head === "" ) calc.expr = "-" + mm[0];
+      else if (/(^|[*\/(])-$/.test(head)) calc.expr = head.slice(0, -1) + mm[0];
+      else if (/[*\/(]$/.test(head)) calc.expr = head + "-" + mm[0];
+      else if (/\+$/.test(head)) calc.expr = head.slice(0, -1) + "-" + mm[0];
+      else if (/-$/.test(head)) calc.expr = head.slice(0, -1) + "+" + mm[0];
+      else calc.expr = e;
+    }
+    else if (/(^|[*\/(])-$/.test(e)) calc.expr = e.slice(0, -1);
+    else if (/[*\/(]$/.test(e)) calc.expr = e + "-";
+  }
   else if (/^\d$/.test(k)) {
     if (calc.fresh) { e = ""; calc.fresh = false; calc.last = ""; }
-    if (/%$/.test(e)) return;
-    if (/(^|[+\-*\/])0$/.test(e)) e = e.slice(0, -1);
+    if (/[%)]$/.test(e)) return;
+    if (/(^|[+\-*\/(])0$/.test(e)) e = e.slice(0, -1);
     calc.expr = e + k;
   }
   else if (k === ".") {
     if (calc.fresh) { e = "0"; calc.fresh = false; calc.last = ""; }
-    if (/%$/.test(e)) return;
+    if (/[%)]$/.test(e)) return;
     var cur = e.match(/[\d.]*$/)[0];
     if (cur.indexOf(".") >= 0) return;
     calc.expr = e + (cur === "" ? "0." : ".");
   }
   else if (k === "%") {
-    if (!/\d$/.test(e)) { renderCalc(); return; }
+    if (!/[\d)]$/.test(e)) { renderCalc(); return; }
     calc.fresh = false;
     calc.expr = e + "%";
   }
   else {
     calc.fresh = false;
-    if (e === "") { if (k === "-") calc.expr = "-"; }
+    if (e === "" || /\($/.test(e)) { if (k === "-") calc.expr = e + "-"; }
     else if (/[*\/]$/.test(e) && k === "-") calc.expr = e + k;
     else {
-      if (/[+\-*\/]$/.test(e)) { e = e.replace(/[+\-*\/]+$/, ""); if (e === "") { renderCalc(); return; } }
+      if (/[+\-*\/]$/.test(e)) { e = e.replace(/[+\-*\/]+$/, ""); if (e === "" || /\($/.test(e)) { renderCalc(); return; } }
       calc.expr = e + k;
     }
   }
@@ -1284,6 +1322,7 @@ document.addEventListener("keydown", function (ev) {
   var k = ev.key, a = toAscii(k);
   if (/^[0-9]$/.test(a)) k = a;
   else if (k === "." || k === "+" || k === "-" || k === "*" || k === "/" || k === "%") { /* as is */ }
+  else if (k === "(" || k === ")") k = "()";
   else if (k === "x" || k === "X") k = "*";
   else if (k === "Enter" || k === "=") k = "=";
   else if (k === "Backspace") k = "⌫";
