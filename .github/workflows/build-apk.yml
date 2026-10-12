@@ -29,14 +29,14 @@ jobs:
       - name: Create Android project
         run: npx cap add android
 
-      - name: Set app name (Calculator+)
+      - name: Set app name (Qalculator)
         run: |
           python3 - <<'PY'
           import re
           p = "android/app/src/main/res/values/strings.xml"
           s = open(p, encoding="utf-8").read()
-          s = re.sub(r'(<string name="app_name">).*?(</string>)', r'\1Calculator+\2', s)
-          s = re.sub(r'(<string name="title_activity_main">).*?(</string>)', r'\1Calculator+\2', s)
+          s = re.sub(r'(<string name="app_name">).*?(</string>)', r'\1Qalculator\2', s)
+          s = re.sub(r'(<string name="title_activity_main">).*?(</string>)', r'\1Qalculator\2', s)
           open(p, "w", encoding="utf-8").write(s)
           print(s)
           PY
