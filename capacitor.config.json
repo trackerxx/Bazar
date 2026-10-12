@@ -1,6 +1,6 @@
 {
   "appId": "com.bazarhisab.app",
-  "appName": "দাম হিসাব",
+  "appName": "Calculator+",
   "webDir": "www",
   "backgroundColor": "#000000",
   "android": {
