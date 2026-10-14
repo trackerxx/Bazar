@@ -220,10 +220,17 @@ input:focus { border-color: var(--accent); }
 .back { font: inherit; font-weight: 600; font-size: .9rem; min-height: 42px; padding: 0 12px; border-radius: 12px; border: 0; background: var(--field-2); color: var(--ink); cursor: pointer; }
 .back-ic { width: 42px; padding: 0; background: none; display: inline-grid; place-items: center; flex: none; }
 .back-ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.c-item { height: 72px; display: grid; grid-template-columns: 1fr; gap: 0; align-items: center; border-bottom: 1px solid var(--line); }
+.c-item { min-height: 72px; padding: 8px 10px; display: grid; grid-template-columns: 1fr; gap: 0; align-items: center; border-bottom: 1px solid var(--line); }
 .c-body { min-width: 0; display: grid; gap: 2px; }
-.c-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-width: 0; }
-.c-e { color: var(--muted); font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-variant-numeric: tabular-nums; }
+.c-line { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-width: 0; }
+.c-sub { padding-inline: 2px; }
+#cs-list { padding-inline: 2px; }
+.c-e { color: var(--muted); font-size: .88rem; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 0; text-align: left; font-variant-numeric: tabular-nums; padding-inline: 2px; }
+.c-line:not(.c-sub) { align-items: flex-start; }
+.c-r { flex: none; max-width: 55%; padding-inline: 2px; }
+#cs-list { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+#cs-list::-webkit-scrollbar { display: none; }
+#cs-pager { display: none; }
 .c-r { font-family: var(--display); font-weight: 700; font-size: .95rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .c-sub { font-size: .74rem; color: var(--muted); }
 
@@ -257,8 +264,15 @@ input:focus { border-color: var(--accent); }
 .v-ok { color: var(--good); font-weight: 700; }
 .v-chip.cur { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
 .v-chip.cur.done { border-color: var(--good); background: var(--good); color: #04130C; }
-.v-tot { flex: none; font-size: .86rem; color: var(--muted); font-variant-numeric: tabular-nums; display: grid; gap: 2px; }
+.v-tot { padding-inline: 14px; flex: none; font-size: .86rem; color: var(--muted); font-variant-numeric: tabular-nums; display: grid; gap: 2px; }
 .v-tot b { color: var(--ink); }
+.v-lbl, .v-btns { padding-inline: 4px; }
+/* sheet blends into the page background (no visible edge line); the keypad underneath is just hidden */
+@supports selector(:has(*)) {
+  .sheet { background: transparent; }
+  .view:has(> .sheet:not([hidden])) > :not(.sheet) { visibility: hidden; }
+  .view:has(> #vsheet:not([hidden])) > #csheet { visibility: hidden; }
+}
 
 /* price history, paged so it never scrolls */
 .hist-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
@@ -1221,15 +1235,17 @@ function calcItemHtml(e, i, n) {
     '<button type="button" class="trash-btn sm" data-act="del" data-id="' + esc(e.id) + '" aria-label="মুছুন">' + TRASH + '</button></span></div></div></div>';
 }
 function renderCalcHist() {
-  var el = $("cs-clear");
+  var el = $("cs-clear"), list = $("cs-list"), top = list.scrollTop;
   if (!state.calc.length) { el.innerHTML = ""; cAsk = false; } else el.innerHTML = clearHtml();
-  drawPaged({
-    list: "cs-list", pager: "cs-pager", info: "cs-info", prev: "cs-prev", next: "cs-next", pg: cPg, itemH: 72, en: true,
-    items: function () { return state.calc; }, html: calcItemHtml,
-    empty: '<p class="empty">এখনো কোনো হিসাব নেই। ক্যালকুলেটরে = চাপলে হিসাবটা এখানে জমা হবে।</p>'
-  });
+  if (!state.calc.length) {
+    list.innerHTML = '<p class="empty">এখনো কোনো হিসাব নেই। ক্যালকুলেটরে = চাপলে হিসাবটা এখানে জমা হবে।</p>';
+    return;
+  }
+  var n = state.calc.length;
+  list.innerHTML = state.calc.map(function (e, i) { return calcItemHtml(e, i, n); }).join("");
+  list.scrollTop = top;
 }
-function openSheet() { commitEdit(); cPg.p = 0; cAsk = false; $("csheet").hidden = false; renderCalcHist(); }
+function openSheet() { commitEdit(); cPg.p = 0; cAsk = false; $("csheet").hidden = false; $("cs-list").scrollTop = 0; renderCalcHist(); }
 function closeSheet() { $("vsheet").hidden = true; $("csheet").hidden = true; }
 $("cs-open").addEventListener("click", openSheet);
 $("cs-back").addEventListener("click", closeSheet);
