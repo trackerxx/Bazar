@@ -195,7 +195,7 @@ input:focus { border-color: var(--accent); }
 .c-ed { font: inherit; font-size: 1.1em; font-weight: 700; color: var(--ink); background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 6px; padding: 0 4px; min-height: 0; height: 1.6em; text-align: center; vertical-align: middle; caret-color: var(--accent); }
 .c-item[data-vf] { cursor: pointer; }
 .c-item[data-vf]:active { background: var(--accent-soft); }
-.c-out { font-family: var(--display); font-weight: 700; font-size: clamp(1.8rem, 5.5vh, 2.4rem); line-height: 1.2; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.c-out { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; cursor: pointer; font-family: var(--display); font-weight: 700; font-size: clamp(1.8rem, 5.5vh, 2.4rem); line-height: 1.2; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .icon-btn { position: absolute; left: 8px; top: 8px; width: 42px; height: 42px; border-radius: 12px; border: 0; background: none; color: var(--muted); display: grid; place-items: center; cursor: pointer; padding: 0; }
 .icon-btn svg { width: 22px; height: 22px; }
 .icon-btn:active { transform: scale(.95); }
@@ -224,7 +224,7 @@ input:focus { border-color: var(--accent); }
 .c-body { min-width: 0; display: grid; gap: 2px; }
 .c-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-width: 0; }
 .c-e { color: var(--muted); font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-variant-numeric: tabular-nums; }
-.c-r { font-family: var(--display); font-weight: 700; font-size: 1.2rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.c-r { font-family: var(--display); font-weight: 700; font-size: .95rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .c-sub { font-size: .74rem; color: var(--muted); }
 
 /* verify sheet (মিলান): step through the prices with arrows */
@@ -469,7 +469,7 @@ input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
       </button>
       <div class="c-expr" id="c-expr">&nbsp;</div>
-      <div class="c-out" id="c-out">০</div>
+      <div class="c-out" id="c-out">0</div>
       <button type="button" class="icon-btn bs-btn" id="c-bs" aria-label="একটা মুছুন">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"></path><path d="M16 9.5l-5 5M11 9.5l5 5"></path></svg>
       </button>
@@ -620,6 +620,15 @@ function money(n) {
   return Number.isInteger(r) ? nf(0, 0).format(r) : nf(2, 2).format(r);
 }
 function numf(n, d) { return isFinite(n) ? nf(0, d).format(n) : "—"; }
+/* calculator uses English digits (Indian-style grouping, same as before) */
+var nfEc = {};
+function numE(n, d) {
+  if (!isFinite(n)) return "—";
+  return (nfEc[d] || (nfEc[d] = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: d }))).format(n);
+}
+var nfRaw = new Intl.NumberFormat("en-US", { useGrouping: false, maximumFractionDigits: 6 });
+function rawNum(v) { return isFinite(v) ? nfRaw.format(v) : ""; }
+function enDigits(s) { return String(s).replace(/[০-৯]/g, function (d) { return BN.indexOf(d); }); }
 var MONEYF = ["rp", "amt"];
 function syncSuf(id) {
   var sp = $(id + "-s"); if (!sp) return;
@@ -629,7 +638,7 @@ function syncSuf(id) {
 var NUMF = ["rp", "rw", "w", "amt"];
 function bnDigits(s) { return String(s).replace(/\d/g, function (d) { return BN[d]; }); }
 function dispExpr(s) {
-  return bnDigits(s).replace(/\*/g, "×").replace(/\//g, "÷").replace(/-/g, "−")
+  return String(s).replace(/\*/g, "×").replace(/\//g, "÷").replace(/-/g, "−")
     .replace(/([+×÷−])/g, " $1 ").replace(/\s+/g, " ").trim();
 }
 /* 1000 or more gram/ml shows as kg/litre, less stays gram/ml */
@@ -755,16 +764,18 @@ function drawPaged(o) {
   var start = o.pg.p * ps;
   list.innerHTML = items.slice(start, start + ps).map(function (e, i) { return o.html(e, start + i, n); }).join("");
   $(o.pager).style.visibility = pages > 1 ? "visible" : "hidden";
-  $(o.info).textContent = numf(o.pg.p + 1, 0) + " / " + numf(pages, 0);
+  var nn = o.en ? numE : numf;
+  $(o.info).textContent = nn(o.pg.p + 1, 0) + " / " + nn(pages, 0);
   $(o.prev).disabled = o.pg.p === 0;
   $(o.next).disabled = o.pg.p >= pages - 1;
 }
 var BN_MON = ["জানু", "ফেব্রু", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টে", "অক্টো", "নভে", "ডিসে"];
-function whenLabel(ts) {
+function whenLabel(ts, en) {
+  var bd = en ? String : bnDigits;
   var d = new Date(ts), h = d.getHours(), m = d.getMinutes();
   var ap = h >= 12 ? "পিএম" : "এএম";
   h = h % 12 || 12;
-  return bnDigits(d.getDate()) + " " + BN_MON[d.getMonth()] + ", " + bnDigits(h) + ":" + bnDigits(m < 10 ? "0" + m : m) + " " + ap;
+  return bd(d.getDate()) + " " + BN_MON[d.getMonth()] + ", " + bd(h) + ":" + bd(m < 10 ? "0" + m : m) + " " + ap;
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 var TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
@@ -913,10 +924,10 @@ $("hb-head").addEventListener("click", function (ev) {
 var calc = { expr: "", last: "", fresh: false, err: "", ed: null };
 var KEYS = [
   ["C", "C", "clr", "সব মুছুন"], ["( )", "()", "op", "বন্ধনী"], ["%", "%", "op", "শতাংশ"], ["÷", "/", "op", "ভাগ"],
-  ["৭", "7"], ["৮", "8"], ["৯", "9"], ["×", "*", "op", "গুণ"],
-  ["৪", "4"], ["৫", "5"], ["৬", "6"], ["−", "-", "op", "বিয়োগ"],
-  ["১", "1"], ["২", "2"], ["৩", "3"], ["+", "+", "op", "যোগ"],
-  ["+/−", "±", "", "চিহ্ন বদল"], ["০", "0"], [".", ".", "", "দশমিক"], ["=", "=", "eq", "সমান"]
+  ["7", "7"], ["8", "8"], ["9", "9"], ["×", "*", "op", "গুণ"],
+  ["4", "4"], ["5", "5"], ["6", "6"], ["−", "-", "op", "বিয়োগ"],
+  ["1", "1"], ["2", "2"], ["3", "3"], ["+", "+", "op", "যোগ"],
+  ["+/−", "±", "", "চিহ্ন বদল"], ["0", "0"], [".", ".", "", "দশমিক"], ["=", "=", "eq", "সমান"]
 ];
 $("keys").innerHTML = KEYS.map(function (k) {
   return '<button type="button" class="' + (k[2] || "") + '" data-k="' + k[1] + '"' + (k[3] ? ' aria-label="' + k[3] + '"' : "") + ">" + k[0] + "</button>";
@@ -945,9 +956,9 @@ function exprHtml(src, k, tail) {
   while ((m = re.exec(src))) {
     if (m[1] !== undefined) {
       if (n === k) {
-        var bv = bnDigits(m[1]);
+        var bv = m[1];
         out += '<input id="c-ed" class="c-ed" type="text" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + bv + '" style="width:' + (Math.max(2, bv.length) * 0.75 + 1.4) + 'em">';
-      } else out += '<span class="c-n" data-k="' + n + '">' + bnDigits(m[1]) + "</span>";
+      } else out += '<span class="c-n" data-k="' + n + '">' + m[1] + "</span>";
       n++; prev = "n";
     } else {
       var op = m[2], un = op === "-" && (prev === "" || prev === "*" || prev === "/" || prev === "(");
@@ -968,7 +979,8 @@ function editCand() {
 }
 function updateEditOut() {
   var v; try { v = evalExpr(trimTail(editCand())); } catch (x) { v = NaN; }
-  $("c-out").textContent = isFinite(v) ? numf(round8(v), 6) : "—";
+  calc.raw = isFinite(v) ? rawNum(round8(v)) : "";
+  $("c-out").textContent = isFinite(v) ? numE(round8(v), 6) : "—";
 }
 function sanitizeEd(inp) {
   var raw = inp.value, pos = inp.selectionStart, out = "", np = 0, dot = false, i, ch;
@@ -979,7 +991,7 @@ function sanitizeEd(inp) {
     else if (ch === "." && !dot) { out += "."; dot = true; }
     if (i + 1 === pos) np = out.length;
   }
-  inp.value = bnDigits(out);
+  inp.value = out;
   try { inp.setSelectionRange(np, np); } catch (x) {}
   fitEd(inp);
 }
@@ -998,7 +1010,7 @@ function editKey(k) {
   if (!isDigit && k !== "." && k !== "⌫") return false;
   var v = inp.value, s0 = inp.selectionStart, e0 = inp.selectionEnd;
   if (s0 === null || s0 === undefined) { s0 = e0 = v.length; }
-  var ins = isDigit ? BN.charAt(parseInt(k, 10)) : k === "." ? "." : "", np;
+  var ins = isDigit ? k : k === "." ? "." : "", np;
   if (k === ".") { if ((v.slice(0, s0) + v.slice(e0)).indexOf(".") >= 0) return true; }
   if (k === "⌫") {
     if (s0 !== e0) { inp.value = v.slice(0, s0) + v.slice(e0); np = s0; }
@@ -1012,14 +1024,19 @@ function editKey(k) {
 
 function renderCalc() {
   var e = calc.expr, t = trimTail(e), top = "", out;
-  if (calc.ed) { top = exprHtml(e, calc.ed.k, ""); out = "০"; }
+  calc.raw = "";
+  if (calc.ed) { top = exprHtml(e, calc.ed.k, ""); out = "0"; }
   else if (calc.err) { top = calc.last ? exprHtml(calc.last, -1, "") : ""; out = calc.err; }
-  else if (calc.fresh) { top = exprHtml(calc.last, -1, " ="); out = numf(parseFloat(e), 6); }
+  else if (calc.fresh) { top = exprHtml(calc.last, -1, " ="); out = numE(parseFloat(e), 6); calc.raw = rawNum(parseFloat(e)); }
   else if (hasOp(t) || /\(/.test(t)) {
     top = exprHtml(e, -1, "");
     var v; try { v = evalExpr(t); } catch (x) { v = NaN; }
-    out = isFinite(v) ? numf(round8(v), 6) : "—";
-  } else { out = e === "" ? "০" : bnDigits(e).replace(/\*/g, "×").replace(/\//g, "÷").replace(/-/g, "−"); }
+    out = isFinite(v) ? numE(round8(v), 6) : "—";
+    calc.raw = isFinite(v) ? rawNum(round8(v)) : "";
+  } else {
+    out = e === "" ? "0" : e.replace(/\*/g, "×").replace(/\//g, "÷").replace(/-/g, "−");
+    calc.raw = /^-?(\d+\.?\d*|\.\d+)$/.test(e) ? e.replace(/\.$/, "") : "";
+  }
   var ce = $("c-expr");
   ce.innerHTML = top || "&nbsp;";
   $("c-out").textContent = out;
@@ -1157,6 +1174,39 @@ $("c-expr").addEventListener("keydown", function (ev) {
   else if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); calc.ed = null; renderCalc(); }
 });
 
+/* long-press the result to copy it (plain number, no commas) */
+function copyText(txt) {
+  function legacy() {
+    var ta = document.createElement("textarea");
+    ta.value = txt; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, txt.length);
+    var ok = false; try { ok = document.execCommand("copy"); } catch (x) {}
+    document.body.removeChild(ta); return ok;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(txt).then(function () { return true; }, function () { return legacy(); });
+  }
+  return Promise.resolve(legacy());
+}
+(function () {
+  var out = $("c-out"), t = 0, x0 = 0, y0 = 0;
+  function stop() { clearTimeout(t); t = 0; }
+  out.addEventListener("pointerdown", function (ev) {
+    stop(); x0 = ev.clientX; y0 = ev.clientY;
+    t = setTimeout(function () {
+      t = 0;
+      var v = calc.raw;
+      if (!v) return;
+      copyText(v).then(function (ok) {
+        if (ok && navigator.vibrate) try { navigator.vibrate(15); } catch (x) {}
+      });
+    }, 450);
+  });
+  out.addEventListener("pointermove", function (ev) { if (t && Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) > 12) stop(); });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function (n) { out.addEventListener(n, stop); });
+  out.addEventListener("contextmenu", function (ev) { ev.preventDefault(); });
+})();
+
 /* calculator history sheet */
 var cPg = { p: 0 }, cAsk = false;
 function sumNums(expr) {
@@ -1165,8 +1215,8 @@ function sumNums(expr) {
 function calcItemHtml(e, i, n) {
   var vf = sumNums(e.expr) ? ' data-vf="1" data-id="' + esc(e.id) + '"' : "";
   return '<div class="c-item"' + vf + '><div class="c-body">' +
-    '<div class="c-line"><span class="c-e">' + esc(dispExpr(e.expr)) + '</span><span class="c-r">= ' + esc(numf(e.result, 6)) + '</span></div>' +
-    '<div class="c-line c-sub"><span>' + esc(whenLabel(e.ts)) + '</span><span class="h-actions">' +
+    '<div class="c-line"><span class="c-e">' + esc(dispExpr(e.expr)) + '</span><span class="c-r">= ' + esc(numE(e.result, 6)) + '</span></div>' +
+    '<div class="c-line c-sub"><span>' + esc(whenLabel(e.ts, true)) + '</span><span class="h-actions">' +
     '<button type="button" class="link-btn" data-act="use" data-id="' + esc(e.id) + '">ব্যবহার</button>' +
     '<button type="button" class="trash-btn sm" data-act="del" data-id="' + esc(e.id) + '" aria-label="মুছুন">' + TRASH + '</button></span></div></div></div>';
 }
@@ -1174,7 +1224,7 @@ function renderCalcHist() {
   var el = $("cs-clear");
   if (!state.calc.length) { el.innerHTML = ""; cAsk = false; } else el.innerHTML = clearHtml();
   drawPaged({
-    list: "cs-list", pager: "cs-pager", info: "cs-info", prev: "cs-prev", next: "cs-next", pg: cPg, itemH: 72,
+    list: "cs-list", pager: "cs-pager", info: "cs-info", prev: "cs-prev", next: "cs-next", pg: cPg, itemH: 72, en: true,
     items: function () { return state.calc; }, html: calcItemHtml,
     empty: '<p class="empty">এখনো কোনো হিসাব নেই। ক্যালকুলেটরে = চাপলে হিসাবটা এখানে জমা হবে।</p>'
   });
@@ -1220,16 +1270,16 @@ var vs = { id: "", orig: [], i: 0, done: [] };
 function renderVerify() {
   var n = vs.orig.length, i = vs.i;
   $("v-del").hidden = n <= 2;
-  $("v-pos").textContent = numf(i + 1, 0) + " / " + numf(n, 0);
-  $("v-num").textContent = numf(vs.orig[i], 6);
+  $("v-pos").textContent = numE(i + 1, 0) + " / " + numE(n, 0);
+  $("v-num").textContent = numE(vs.orig[i], 6);
   fitNum();
   var run = round8(vs.orig.slice(0, i + 1).reduce(function (s, v) { return s + v; }, 0));
   var all = round8(vs.orig.reduce(function (s, v) { return s + v; }, 0));
-  $("v-tot").innerHTML = "<span>এ পর্যন্ত যোগফল: <b>" + esc(numf(run, 6)) + "</b></span><span>মোট: <b>" + esc(numf(all, 6)) + "</b></span>" +
+  $("v-tot").innerHTML = "<span>এ পর্যন্ত যোগফল: <b>" + esc(numE(run, 6)) + "</b></span><span>মোট: <b>" + esc(numE(all, 6)) + "</b></span>" +
     (vs.done.filter(Boolean).length === n ? '<span class="v-ok">✓ সব দাম দেখা শেষ, সব মিলেছে</span>' : "");
   $("v-expr").innerHTML = vs.orig.map(function (v, k) {
-    return '<span class="v-n' + (k === i ? " cur" : "") + (vs.done[k] ? " done" : "") + '" data-i="' + k + '">' + esc(numf(v, 6)) + "</span>";
-  }).join(" + ") + " = " + esc(numf(all, 6));
+    return '<span class="v-n' + (k === i ? " cur" : "") + (vs.done[k] ? " done" : "") + '" data-i="' + k + '">' + esc(numE(v, 6)) + "</span>";
+  }).join(" + ") + " = " + esc(numE(all, 6));
   vShow();
 }
 /* shrink a long number so it always stays on one line inside the box */
@@ -1277,6 +1327,30 @@ function openVerify(id) {
   $("v-expr").scrollTop = 0;
   renderVerify();
 }
+/* long-press the whole box to copy everything in it */
+(function () {
+  var box = $("v-expr"), t = 0, x0 = 0, y0 = 0, did = false;
+  function stop() { clearTimeout(t); t = 0; }
+  box.style.cssText += ";-webkit-user-select:none;user-select:none;-webkit-touch-callout:none";
+  box.addEventListener("pointerdown", function (ev) {
+    stop(); did = false; x0 = ev.clientX; y0 = ev.clientY;
+    t = setTimeout(function () {
+      t = 0;
+      if (!vs.orig.length) return;
+      var all = round8(vs.orig.reduce(function (a, v) { return a + v; }, 0));
+      var txt = vs.orig.map(function (v) { return rawNum(v); }).join(" + ") + " = " + rawNum(all);
+      did = true;
+      copyText(txt).then(function (ok) {
+        if (ok && navigator.vibrate) try { navigator.vibrate(15); } catch (x) {}
+      });
+    }, 450);
+  });
+  box.addEventListener("pointermove", function (ev) { if (t && Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) > 12) stop(); });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function (n) { box.addEventListener(n, stop); });
+  box.addEventListener("contextmenu", function (ev) { ev.preventDefault(); });
+  /* the release after a long-press must not also select a number */
+  box.addEventListener("click", function (ev) { if (did) { did = false; ev.stopImmediatePropagation(); ev.preventDefault(); } }, true);
+})();
 $("v-prev").addEventListener("click", function () { vStep(-1); });
 $("v-next").addEventListener("click", function () { vStep(1); });
 $("v-expr").addEventListener("click", function (ev) {
@@ -1290,7 +1364,7 @@ function closeEditRow() { $("v-in").hidden = true; $("v-num").hidden = false; $(
 function openEditRow() {
   var inp = $("v-in");
   $("v-num").hidden = true; inp.hidden = false; $("v-btns").hidden = true; $("v-editrow").hidden = false;
-  inp.value = bnDigits(String(vs.orig[vs.i])); fitV(inp); inp.focus();
+  inp.value = String(vs.orig[vs.i]); fitV(inp); inp.focus();
   try { var L = inp.value.length; inp.setSelectionRange(L, L); } catch (x) {}
 }
 function commitVerify() {
@@ -1312,7 +1386,7 @@ function saveEdit() {
 $("v-save").addEventListener("click", saveEdit);
 $("v-in").addEventListener("input", function () {
   var i = $("v-in"), p = i.selectionStart;
-  i.value = bnDigits(i.value); fitV(i);
+  i.value = enDigits(i.value); fitV(i);
   try { i.setSelectionRange(p, p); } catch (x) {}
 });
 $("v-in").addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); saveEdit(); } });
