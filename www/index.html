@@ -511,11 +511,11 @@ input, .pick, .tabs, .seg { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
       </div>
       <div class="v-sum"><div class="v-scroll" id="v-expr"></div></div>
       <div class="v-stage">
-        <button type="button" class="v-arr" id="v-prev" aria-label="আগের দাম">‹</button>
-        <div class="v-cur" id="v-cur"><div class="v-pos" id="v-pos"></div><div class="v-num" id="v-num"></div><input id="v-in" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="সঠিক দাম" hidden></div>
-        <button type="button" class="v-arr" id="v-next" aria-label="পরের দাম">›</button>
+        <button type="button" class="v-arr" id="v-prev" aria-label="আগের সংখ্যা">‹</button>
+        <div class="v-cur" id="v-cur"><div class="v-pos" id="v-pos"></div><div class="v-num" id="v-num"></div><input id="v-in" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="সঠিক সংখ্যা" hidden></div>
+        <button type="button" class="v-arr" id="v-next" aria-label="পরের সংখ্যা">›</button>
       </div>
-      <div class="v-lbl" style="text-align:center">দাম ভুল হলে মাঝের বড় বক্সে চাপ দিয়ে ঠিক করুন</div>
+      <div class="v-lbl" style="text-align:center">কোনো সংখ্যা ভুল হলে মাঝের বড় বক্সে চাপ দিয়ে ঠিক করুন</div>
       <div class="v-btns" id="v-btns">
         <button type="button" class="link-btn danger" id="v-del">বাদ দিন</button>
       </div>
@@ -963,6 +963,34 @@ function normNum(a) {
   if (a.charAt(0) === ".") a = "0" + a;
   return a.replace(/\.$/, "").replace(/^0+(?=\d)/, "");
 }
+/* leading zeros are dropped unless a "." follows (0.12 stays, 0360 becomes 360); the cursor moves with the text */
+function stripLead(v, p) {
+  var z = 0;
+  while (z < v.length - 1 && v.charAt(z) === "0" && /\d/.test(v.charAt(z + 1))) z++;
+  return z ? { v: v.slice(z), p: Math.max(0, p - z) } : { v: v, p: p };
+}
+/* clean up leftovers after a number is taken out: (), "(+", "+)", "++" */
+function tidyExpr(s) {
+  var p;
+  do {
+    p = s;
+    s = s.replace(/\(\)%?/g, "").replace(/\(([+*\/])/g, "(").replace(/[+\-*\/]\)/g, ")")
+      .replace(/[+\-*\/]([+*\/])/g, "$1").replace(/^[+*\/]+/, "");
+  } while (s !== p);
+  return s;
+}
+/* the expression with number k (and the operator that joined it) taken out */
+function dropNum(src, k) {
+  var t = numToks(src)[k];
+  if (!t) return src;
+  var e = t.e;
+  if (src.charAt(e) === "%") e++;
+  var before = src.slice(0, t.s), after = src.slice(e);
+  var m = before.match(/[+\-*\/]+$/), core = m ? before.slice(0, before.length - m[0].length) : before;
+  if (core !== "" && !/\($/.test(core)) before = core;
+  else { before = core; after = after.replace(/^[+\-*\/]/, ""); }
+  return tidyExpr(before + after);
+}
 function fitEd(inp) { inp.style.width = (Math.max(2, inp.value.length) * 0.75 + 1.4) + "em"; }
 /* the expression as tappable numbers; number number k (if k >= 0) is an input with a cursor */
 function exprHtml(src, k, tail) {
@@ -989,10 +1017,11 @@ function editCand() {
   var inp = $("c-ed"), t = numToks(calc.expr)[calc.ed.k];
   if (!inp || !t) return calc.expr;
   var v = normNum(toAscii(inp.value));
-  return v === "" ? calc.expr : calc.expr.slice(0, t.s) + v + calc.expr.slice(t.e);
+  return v === "" ? dropNum(calc.expr, calc.ed.k) : calc.expr.slice(0, t.s) + v + calc.expr.slice(t.e);
 }
 function updateEditOut() {
-  var v; try { v = evalExpr(trimTail(editCand())); } catch (x) { v = NaN; }
+  var c = trimTail(editCand()), v;
+  if (c === "") v = 0; else { try { v = evalExpr(c); } catch (x) { v = NaN; } }
   calc.raw = isFinite(v) ? rawNum(round8(v)) : "";
   $("c-out").textContent = isFinite(v) ? numE(round8(v), 6) : "—";
 }
@@ -1005,16 +1034,41 @@ function sanitizeEd(inp) {
     else if (ch === "." && !dot) { out += "."; dot = true; }
     if (i + 1 === pos) np = out.length;
   }
-  inp.value = out;
+  var f = stripLead(out, np);
+  inp.value = f.v; np = f.p;
   try { inp.setSelectionRange(np, np); } catch (x) {}
   fitEd(inp);
 }
+/* an empty box is removed (with its operator) when the edit ends; returns true if a number was removed */
 function commitEdit() {
-  if (!calc.ed) return;
-  var inp = $("c-ed"), t = numToks(calc.expr)[calc.ed.k], v = inp ? normNum(toAscii(inp.value)) : "";
+  if (!calc.ed) return false;
+  var inp = $("c-ed"), k = calc.ed.k, t = numToks(calc.expr)[k], v = inp ? normNum(toAscii(inp.value)) : "", gone = false;
   calc.ed = null;
-  if (t && v !== "") calc.expr = calc.expr.slice(0, t.s) + v + calc.expr.slice(t.e);
+  if (t) {
+    if (v !== "") calc.expr = calc.expr.slice(0, t.s) + v + calc.expr.slice(t.e);
+    else if (inp) { calc.expr = dropNum(calc.expr, k); gone = true; }
+  }
   renderCalc();
+  return gone;
+}
+/* an operator key pressed while a number is being edited changes the operator just before that number (5 + [ ] -> 5 − [ ]) and keeps the edit open */
+function editOp(k) {
+  var inp = $("c-ed"), t = numToks(calc.expr)[calc.ed.k];
+  if (!inp || !t) return false;
+  var before = calc.expr.slice(0, t.s), m = before.match(/[+\-*\/]+$/);
+  if (!m) return true;
+  var head = before.slice(0, before.length - m[0].length);
+  if (head === "" || /\($/.test(head)) return true;
+  var typed = inp.value;
+  calc.expr = head + k + calc.expr.slice(t.s);
+  renderCalc();
+  var ni = $("c-ed");
+  if (ni) {
+    ni.value = typed; fitEd(ni);
+    try { ni.focus({ preventScroll: true }); ni.setSelectionRange(typed.length, typed.length); } catch (x) {}
+    updateEditOut();
+  }
+  return true;
 }
 /* keypad keys typed into the number being edited, at the cursor */
 function editKey(k) {
@@ -1031,6 +1085,8 @@ function editKey(k) {
     else if (s0 > 0) { inp.value = v.slice(0, s0 - 1) + v.slice(s0); np = s0 - 1; }
     else return true;
   } else { inp.value = v.slice(0, s0) + ins + v.slice(e0); np = s0 + 1; }
+  var f = stripLead(inp.value, np);
+  inp.value = f.v; np = f.p;
   try { inp.focus({ preventScroll: true }); inp.setSelectionRange(np, np); } catch (x) {}
   fitEd(inp); updateEditOut();
   return true;
@@ -1075,6 +1131,7 @@ function press(k) {
   if (calc.ed) {
     if (k === "C") calc.ed = null;
     else if (editKey(k)) return;
+    else if (k === "+" || k === "-" || k === "*" || k === "/") { if (editOp(k)) return; commitEdit(); }
     else commitEdit();
   }
   var e = calc.expr;
@@ -1161,7 +1218,7 @@ $("c-expr").addEventListener("click", function (ev) {
   var sp = ev.target.closest("span.c-n");
   if (!sp) return;
   var k = parseInt(sp.dataset.k, 10);
-  if (calc.ed) commitEdit();
+  if (calc.ed) { var prevK = calc.ed.k; if (commitEdit() && k > prevK) k--; }
   else if (calc.fresh || calc.err) {
     if (!calc.last) return;
     calc.expr = calc.last; calc.last = ""; calc.fresh = false; calc.err = "";
@@ -1227,7 +1284,7 @@ function sumNums(expr) {
   return /^\d+(\.\d+)?(\+\d+(\.\d+)?)+$/.test(String(expr)) ? String(expr).split("+").map(parseFloat) : null;
 }
 function calcItemHtml(e, i, n) {
-  var vf = sumNums(e.expr) ? ' data-vf="1" data-id="' + esc(e.id) + '"' : "";
+  var vf = canVerify(e.expr) ? ' data-vf="1" data-id="' + esc(e.id) + '"' : "";
   return '<div class="c-item"' + vf + '><div class="c-body">' +
     '<div class="c-line"><span class="c-e">' + esc(dispExpr(e.expr)) + '</span><span class="c-r">= ' + esc(numE(e.result, 6)) + '</span></div>' +
     '<div class="c-line c-sub"><span>' + esc(whenLabel(e.ts, true)) + '</span><span class="h-actions">' +
@@ -1282,20 +1339,50 @@ $("cs-clear").addEventListener("click", function (ev) {
 });
 
 /* ---------- মিলান: step through the saved prices one by one with arrows ---------- */
-var vs = { id: "", orig: [], i: 0, done: [] };
+var vs = { id: "", src: "", i: 0, done: [] };
+/* every number in the saved expression, in order (brackets, ×, ÷, −, % all allowed) */
+function vVals(src) { src = src === undefined ? vs.src : src; return numToks(src).map(function (t) { return parseFloat(src.slice(t.s, t.e)); }); }
+function vEval(src) {
+  var t = closeParens(trimTail(String(src))), v;
+  if (t === "") return NaN;
+  try { v = evalExpr(t); } catch (x) { v = NaN; }
+  return isFinite(v) ? round8(v) : NaN;
+}
+function canVerify(expr) { expr = String(expr || ""); return numToks(expr).length >= 2 && isFinite(vEval(expr)); }
+/* the expression with each number as a tappable chip; the current one is highlighted */
+function vExprHtml(src, cur, done) {
+  var re = /(\d+\.?\d*|\.\d+)|([+\-*\/%()])/g, m, out = "", n = 0, prev = "";
+  while ((m = re.exec(src))) {
+    if (m[1] !== undefined) {
+      out += '<span class="v-n' + (n === cur ? " cur" : "") + (done[n] ? " done" : "") + '" data-i="' + n + '">' + esc(numE(parseFloat(m[1]), 6)) + "</span>";
+      n++; prev = "n";
+    } else {
+      var op = m[2], un = op === "-" && (prev === "" || prev === "*" || prev === "/" || prev === "(");
+      if (op === "%") { out += "%"; prev = "n"; continue; }
+      if (op === "(") { out += "("; prev = "("; continue; }
+      if (op === ")") { out += ")"; prev = "n"; continue; }
+      out += un ? SYM[op] : " " + SYM[op] + " ";
+      prev = op;
+    }
+  }
+  return out;
+}
 function renderVerify() {
-  var n = vs.orig.length, i = vs.i;
+  var vals = vVals(), n = vals.length, i = vs.i;
+  if (i >= n) i = vs.i = Math.max(0, n - 1);
+  var all = vEval(vs.src), isSum = !!sumNums(vs.src);
   $("v-del").hidden = n <= 2;
   $("v-pos").textContent = numE(i + 1, 0) + " / " + numE(n, 0);
-  $("v-num").textContent = numE(vs.orig[i], 6);
+  $("v-num").textContent = numE(vals[i], 6);
   fitNum();
-  var run = round8(vs.orig.slice(0, i + 1).reduce(function (s, v) { return s + v; }, 0));
-  var all = round8(vs.orig.reduce(function (s, v) { return s + v; }, 0));
-  $("v-tot").innerHTML = "<span>এ পর্যন্ত যোগফল: <b>" + esc(numE(run, 6)) + "</b></span><span>মোট: <b>" + esc(numE(all, 6)) + "</b></span>" +
-    (vs.done.filter(Boolean).length === n ? '<span class="v-ok">✓ সব দাম দেখা শেষ, সব মিলেছে</span>' : "");
-  $("v-expr").innerHTML = vs.orig.map(function (v, k) {
-    return '<span class="v-n' + (k === i ? " cur" : "") + (vs.done[k] ? " done" : "") + '" data-i="' + k + '">' + esc(numE(v, 6)) + "</span>";
-  }).join(" + ") + " = " + esc(numE(all, 6));
+  var tot = "";
+  if (isSum) {
+    var run = round8(vals.slice(0, i + 1).reduce(function (a, v) { return a + v; }, 0));
+    tot = "<span>এ পর্যন্ত যোগফল: <b>" + esc(numE(run, 6)) + "</b></span><span>মোট: <b>" + esc(numE(all, 6)) + "</b></span>";
+  } else tot = "<span>মোট ফলাফল: <b>" + esc(numE(all, 6)) + "</b></span>";
+  if (vs.done.filter(Boolean).length === n) tot += '<span class="v-ok">✓ সব সংখ্যা দেখা শেষ, সব মিলেছে</span>';
+  $("v-tot").innerHTML = tot;
+  $("v-expr").innerHTML = vExprHtml(vs.src, i, vs.done) + " = " + esc(numE(all, 6));
   vShow();
 }
 /* shrink a long number so it always stays on one line inside the box */
@@ -1325,7 +1412,7 @@ $("v-expr").addEventListener("scroll", function () {
   }, 90);
 }, { passive: true });
 function vStep(d) {
-  var n = vs.orig.length;
+  var n = vVals().length;
   if (!n) return;
   closeEditRow();
   if (d > 0) { vs.done[vs.i] = true; if (vs.i < n - 1) vs.i++; }
@@ -1335,9 +1422,8 @@ function vStep(d) {
 }
 function openVerify(id) {
   var e = state.calc.filter(function (x) { return x.id === id; })[0];
-  var nums = e && sumNums(e.expr);
-  if (!nums) return;
-  vs = { id: id, orig: nums, i: 0, done: [] };
+  if (!e || !canVerify(e.expr)) return;
+  vs = { id: id, src: String(e.expr), i: 0, done: [] };
   closeEditRow();
   $("vsheet").hidden = false;
   $("v-expr").scrollTop = 0;
@@ -1352,9 +1438,8 @@ function openVerify(id) {
     stop(); did = false; x0 = ev.clientX; y0 = ev.clientY;
     t = setTimeout(function () {
       t = 0;
-      if (!vs.orig.length) return;
-      var all = round8(vs.orig.reduce(function (a, v) { return a + v; }, 0));
-      var txt = vs.orig.map(function (v) { return rawNum(v); }).join(" + ") + " = " + rawNum(all);
+      if (!vs.src) return;
+      var txt = dispExpr(vs.src) + " = " + rawNum(vEval(vs.src));
       did = true;
       copyText(txt).then(function (ok) {
         if (ok && navigator.vibrate) try { navigator.vibrate(15); } catch (x) {}
@@ -1380,14 +1465,14 @@ function closeEditRow() { $("v-in").hidden = true; $("v-num").hidden = false; $(
 function openEditRow() {
   var inp = $("v-in");
   $("v-num").hidden = true; inp.hidden = false; $("v-btns").hidden = true; $("v-editrow").hidden = false;
-  inp.value = String(vs.orig[vs.i]); fitV(inp); inp.focus();
+  inp.value = String(vVals()[vs.i]); fitV(inp); inp.focus();
   try { var L = inp.value.length; inp.setSelectionRange(L, L); } catch (x) {}
 }
 function commitVerify() {
   var e = state.calc.filter(function (x) { return x.id === vs.id; })[0];
   if (!e) return;
-  e.expr = vs.orig.map(String).join("+");
-  e.result = round8(vs.orig.reduce(function (s, v) { return s + v; }, 0));
+  e.expr = vs.src;
+  e.result = vEval(vs.src);
   persistAll(); renderCalcHist();
   renderVerify();
 }
@@ -1396,7 +1481,11 @@ $("v-cancel").addEventListener("click", closeEditRow);
 function saveEdit() {
   var inp = $("v-in"), n = parse(inp.value);
   if (!(n >= 0)) { inp.focus(); return; }
-  vs.orig[vs.i] = n; vs.done[vs.i] = false;
+  var t = numToks(vs.src)[vs.i];
+  if (!t) return;
+  var cand = vs.src.slice(0, t.s) + rawNum(n) + vs.src.slice(t.e);
+  if (!isFinite(vEval(cand))) { inp.focus(); return; }
+  vs.src = cand; vs.done[vs.i] = false;
   closeEditRow(); commitVerify();
 }
 $("v-save").addEventListener("click", saveEdit);
@@ -1407,9 +1496,11 @@ $("v-in").addEventListener("input", function () {
 });
 $("v-in").addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); saveEdit(); } });
 $("v-del").addEventListener("click", function () {
-  confirmBox("দামটা বাদ দিবেন?", "এই দামটা হিসাব থেকে সরে যাবে আর যোগফল নতুন করে হবে।", "বাদ দিন", function () {
-    vs.orig.splice(vs.i, 1); vs.done.splice(vs.i, 1);
-    if (vs.i >= vs.orig.length) vs.i = vs.orig.length - 1;
+  confirmBox("সংখ্যাটা বাদ দিবেন?", "এই সংখ্যাটা হিসাব থেকে সরে যাবে আর ফলাফল নতুন করে হবে।", "বাদ দিন", function () {
+    var cand = dropNum(vs.src, vs.i);
+    if (numToks(cand).length < 1 || !isFinite(vEval(cand))) return;
+    vs.src = cand; vs.done.splice(vs.i, 1);
+    if (vs.i >= numToks(cand).length) vs.i = numToks(cand).length - 1;
     commitVerify();
   });
 });
